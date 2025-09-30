@@ -145,7 +145,7 @@ export function analyzeWordRoots(word: string): string[] {
   const foundRoots: string[] = [];
   
   // 遍历所有词根，查找匹配
-  for (const [root, rootInfo] of Object.entries(ROOT_DATABASE)) {
+  for (const [root] of Object.entries(ROOT_DATABASE)) {
     if (normalizedWord.includes(root)) {
       foundRoots.push(root);
     }
@@ -158,7 +158,7 @@ export function analyzeWordRoots(word: string): string[] {
 export function getRelatedWords(root: string): WordInfo[] {
   const relatedWords: WordInfo[] = [];
   
-  for (const [word, wordInfo] of Object.entries(WORD_DATABASE)) {
+  for (const [, wordInfo] of Object.entries(WORD_DATABASE)) {
     if (wordInfo.roots.includes(root)) {
       relatedWords.push(wordInfo);
     }

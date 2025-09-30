@@ -14,10 +14,11 @@ export const USER_LEVELS = {
   advanced: { name: 'Advanced', description: '高级英语', difficulty: 5 },
 } as const;
 
+// 导出 UserLevel 类型
+export type UserLevel = keyof typeof USER_LEVELS;
+
 // 根据用户水平过滤单词难度
-export function filterWordsByLevel(words: string[], userLevel: keyof typeof USER_LEVELS): string[] {
-  const levelDifficulty = USER_LEVELS[userLevel].difficulty;
-  
+export function filterWordsByLevel(words: string[]): string[] {
   // 这里可以根据实际需求实现更复杂的过滤逻辑
   // 目前简单返回所有单词，后续可以基于词频、难度等指标过滤
   return words;
@@ -39,7 +40,7 @@ export function generateId(): string {
 }
 
 // 计算词根网络深度
-export function calculateGraphDepth(nodes: any[]): number {
+export function calculateGraphDepth(nodes: Array<{level?: number}>): number {
   if (nodes.length === 0) return 0;
   return Math.max(...nodes.map(node => node.level || 0));
 }

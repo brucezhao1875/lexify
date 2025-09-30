@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -20,27 +20,27 @@ export function WordAnalysis({ word, userLevel, onBack }: WordAnalysisProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const performAnalysis = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // 模拟分析延迟
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const result = analyzeWord(word, userLevel);
+        setAnalysisResult(result);
+      } catch {
+        setError('分析失败，请重试');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     performAnalysis();
   }, [word, userLevel]);
 
-  const performAnalysis = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // 模拟分析延迟
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const result = analyzeWord(word, userLevel);
-      setAnalysisResult(result);
-    } catch (err) {
-      setError('分析失败，请重试');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const analyzeWord = (word: string, userLevel: UserLevel): RootAnalysisResult => {
+  const analyzeWord = useCallback((word: string, userLevel: UserLevel): RootAnalysisResult => {
     const normalizedWord = word.toLowerCase();
     
     // 1. 分析词根
@@ -69,11 +69,11 @@ export function WordAnalysis({ word, userLevel, onBack }: WordAnalysisProps) {
       relatedWords: filteredWords,
       graph
     };
-  };
+  }, []);
 
-  const buildWordGraph = (centerWord: string, roots: RootInfo[], relatedWords: WordInfo[]) => {
-    const nodes = [];
-    const edges = [];
+  const buildWordGraph = useCallback((centerWord: string, roots: RootInfo[], relatedWords: WordInfo[]) => {
+    const nodes: Array<{id: string; type: 'word' | 'root'; label: string; data: WordInfo | RootInfo; level: number}> = [];
+    const edges: Array<{source: string; target: string; type: 'contains' | 'derived_from' | 'related_to'}> = [];
     
     // 中心单词节点
     nodes.push({
@@ -91,7 +91,7 @@ export function WordAnalysis({ word, userLevel, onBack }: WordAnalysisProps) {
     });
     
     // 词根节点
-    roots.forEach((root, index) => {
+    roots.forEach((root) => {
       nodes.push({
         id: root.root,
         type: 'root' as const,
@@ -109,7 +109,7 @@ export function WordAnalysis({ word, userLevel, onBack }: WordAnalysisProps) {
     });
     
     // 相关单词节点
-    relatedWords.slice(0, 10).forEach((word, index) => {
+    relatedWords.slice(0, 10).forEach((word) => {
       if (word.word !== centerWord) {
         nodes.push({
           id: word.word,
@@ -138,6 +138,17 @@ export function WordAnalysis({ word, userLevel, onBack }: WordAnalysisProps) {
       centerWord,
       maxDepth: 2
     };
+  }, [userLevel]);
+
+  const performAnalysis = () => {
+    // 重新触发 useEffect 来重新分析
+    setError(null);
+    setIsLoading(true);
+    setTimeout(() => {
+      const result = analyzeWord(word, userLevel);
+      setAnalysisResult(result);
+      setIsLoading(false);
+    }, 1000);
   };
 
   const getOriginColor = (origin: string) => {
@@ -160,7 +171,7 @@ export function WordAnalysis({ word, userLevel, onBack }: WordAnalysisProps) {
       gre: 'bg-red-100 text-red-800',
       advanced: 'bg-orange-100 text-orange-800'
     };
-    return colors[level as keyof typeof colors] || colors.other;
+    return colors[level as keyof typeof colors] || colors.cet4;
   };
 
   if (isLoading) {
@@ -178,7 +189,7 @@ export function WordAnalysis({ word, userLevel, onBack }: WordAnalysisProps) {
           <CardContent className="flex items-center justify-center py-12">
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-300">正在分析单词 "{word}" 的词根结构...</p>
+              <p className="text-gray-600 dark:text-gray-300">正在分析单词 &quot;{word}&quot; 的词根结构...</p>
             </div>
           </CardContent>
         </Card>
