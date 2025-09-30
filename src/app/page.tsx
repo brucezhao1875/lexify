@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UserLevelSelector } from '@/components/UserLevelSelector';
 import { WordInput } from '@/components/WordInput';
 import { WordAnalysis } from '@/components/WordAnalysis';
-import { BookOpen, Brain, Network } from 'lucide-react';
+import { LearningStatsComponent } from '@/components/LearningStats';
+import { DailyPlanComponent } from '@/components/DailyPlan';
+import { LearningProgressService } from '@/lib/learningProgress';
+import { BookOpen, Brain, Network, Calendar } from 'lucide-react';
 import { UserLevel } from '@/types';
 
 export default function Home() {
@@ -30,6 +33,20 @@ export default function Home() {
     setCurrentWord(null);
     setIsAnalyzing(false);
   };
+
+  // 页面卸载时结束学习会话
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      LearningProgressService.endStudySession(4); // 默认专注度4
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      LearningProgressService.endStudySession(4);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -75,8 +92,14 @@ export default function Home() {
               {/* Word Input */}
               <WordInput onWordSubmit={handleWordSubmit} isLoading={isAnalyzing} />
 
+              {/* Learning Stats */}
+              <LearningStatsComponent />
+
+              {/* Daily Plan */}
+              <DailyPlanComponent userLevel={userLevel} />
+
               {/* Features Preview */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-12">
                 <div className="text-center p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
                   <Brain className="h-12 w-12 text-blue-600 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">智能词根分析</h3>
@@ -92,10 +115,17 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="text-center p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                  <BookOpen className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">个性化学习</h3>
+                  <Calendar className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">每日学习计划</h3>
                   <p className="text-gray-600 dark:text-gray-300">
-                    根据你的英语水平智能筛选单词难度，定制学习内容
+                    智能生成每日学习计划，包含核心词汇、扩展词汇和复习内容
+                  </p>
+                </div>
+                <div className="text-center p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                  <BookOpen className="h-12 w-12 text-orange-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">进度跟踪</h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    详细记录学习进度，提供统计数据和成就系统
                   </p>
                 </div>
               </div>

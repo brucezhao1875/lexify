@@ -7,6 +7,10 @@ import { Badge } from '@/components/ui/Badge';
 import { Brain, BookOpen, Network, ArrowLeft, Loader2 } from 'lucide-react';
 import { RootAnalysisResult, RootInfo, WordInfo, UserLevel } from '@/types';
 import { analyzeWordRoots, getRelatedWords, filterWordsByUserLevel, ROOT_DATABASE, WORD_DATABASE } from '@/data/roots';
+import { PronunciationPlayer } from '@/components/PronunciationPlayer';
+import { WordExamples } from '@/components/WordExamples';
+import { WordGraphVisualization } from '@/components/WordGraphVisualization';
+import { LearningProgressService } from '@/lib/learningProgress';
 
 interface WordAnalysisProps {
   word: string;
@@ -25,11 +29,25 @@ export function WordAnalysis({ word, userLevel, onBack }: WordAnalysisProps) {
       setError(null);
       
       try {
+        // 开始学习会话（如果没有进行中的会话）
+        LearningProgressService.startStudySession();
+        
         // 模拟分析延迟
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         const result = analyzeWord(word, userLevel);
         setAnalysisResult(result);
+        
+        // 记录主单词的学习进度
+        const context = result.roots.map(r => r.root).join(',');
+        LearningProgressService.recordWordProgress(word, context);
+        LearningProgressService.addWordToCurrentSession(word);
+        
+        // 记录学习的词根
+        result.roots.forEach(root => {
+          LearningProgressService.addRootToCurrentSession(root.root);
+        });
+        
       } catch {
         setError('分析失败，请重试');
       } finally {
@@ -228,15 +246,36 @@ export function WordAnalysis({ word, userLevel, onBack }: WordAnalysisProps) {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             词根分析结果
           </h2>
-          <p className="text-gray-600 dark:text-gray-300">
-            单词: <span className="font-semibold text-blue-600">{analysisResult.word}</span>
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-gray-600 dark:text-gray-300">
+              单词: <span className="font-semibold text-blue-600">{analysisResult.word}</span>
+            </p>
+            <PronunciationPlayer word={analysisResult.word} />
+          </div>
         </div>
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           返回
         </Button>
       </div>
+
+      {/* 主单词例句 */}
+      {WORD_DATABASE[analysisResult.word]?.examples && WORD_DATABASE[analysisResult.word].examples!.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-blue-600" />
+              单词例句
+            </CardTitle>
+            <CardDescription>
+              通过例句帮助理解单词 <span className="font-semibold text-blue-600">{analysisResult.word}</span> 的用法
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <WordExamples examples={WORD_DATABASE[analysisResult.word]?.examples || []} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* 词根信息 */}
       {analysisResult.roots.length > 0 ? (
@@ -309,6 +348,9 @@ export function WordAnalysis({ word, userLevel, onBack }: WordAnalysisProps) {
                       {word.level.toUpperCase()}
                     </Badge>
                   </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <PronunciationPlayer word={word.word} className="scale-75" />
+                  </div>
                   <p className="text-sm text-gray-600 dark:text-gray-300">{word.meaning}</p>
                   {word.roots.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
@@ -319,12 +361,29 @@ export function WordAnalysis({ word, userLevel, onBack }: WordAnalysisProps) {
                       ))}
                     </div>
                   )}
+                  <WordExamples examples={word.examples || []} />
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* 词根图谱可视化 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Network className="h-5 w-5 text-green-600" />
+            词根图谱可视化
+          </CardTitle>
+          <CardDescription>
+            交互式词汇网络图，可以拖拽节点进行探索
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <WordGraphVisualization graph={analysisResult.graph} />
+        </CardContent>
+      </Card>
 
       {/* 词汇网络统计 */}
       <Card>
